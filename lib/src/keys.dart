@@ -2,6 +2,11 @@
 class Key {
   final int value;
   Key(this.value);
+
+  @override
+  String toString() {
+    return '<$runtimeType: $value>';
+  }
 }
 
 // Creates keys in an an ordered way
