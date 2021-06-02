@@ -1,12 +1,26 @@
-import 'package:updatable/updatable.dart';
+import 'package:updatable/src/keys.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('A group of tests', () {
+  group('Keys', () {
+    late KeyMaker keys;
+
     setUp(() {
-      // Additional setup goes here.
+      keys = KeyMaker();
     });
 
-    test('First Test', () {});
+    test('Create', () {
+      expect(() => Key(42), returnsNormally);
+      expect(Key(1202), isNotNull);
+
+      expect(() => KeyMaker(), returnsNormally);
+      expect(KeyMaker(), isNotNull);
+    });
+
+    test('Ordered next keys', () {
+      for (int i = 0; i < 100; i++) {
+        expect(keys.next.value, i);
+      }
+    });
   });
 }
