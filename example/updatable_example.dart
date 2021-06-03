@@ -5,6 +5,7 @@ void main() {
   p.name = 'Jerome';
 }
 
+/// Class that observes its own changes
 class SelfAbsorbedPerson with Updatable {
   String _name = 'Bob';
   String get name => _name;
