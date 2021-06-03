@@ -10,7 +10,6 @@ mixin Updatable {
   Set<Key> _keys = {};
 
   // make sure re-entrant calls dont send more than 1 notification
-  bool _shouldNotify = true;
 
   int _totalCalls = 0;
 
@@ -19,7 +18,6 @@ mixin Updatable {
       final key = keys.next;
       _keys.add(key);
       _observers[key] = notifyMe;
-      print('Added $notifyMe');
     }
   }
 
@@ -42,11 +40,9 @@ mixin Updatable {
   /// Change and Notify
   void changeState(Thunk callback) {
     _totalCalls += 1;
-    _shouldNotify = false;
 
     callback();
 
-    _shouldNotify = true;
     if (_totalCalls == 1) {
       scheduleMicrotask(() => _notifyAllObservers());
     }
@@ -58,7 +54,6 @@ mixin Updatable {
   Key? _findKey(Thunk needle) {
     Key? found;
     Thunk? thunk;
-    final Set<Key> lostKeys = {};
 
     for (final Key each in _keys) {
       // Obtain the callback fro the Expando
@@ -68,20 +63,15 @@ mixin Updatable {
         if (thunk! == needle) {
           found = each;
           break;
-        } else {
-          // this key has no value, remove it
-          lostKeys.add(each);
         }
       }
     }
-
-    // cleanup the keys
-    _keys = _keys.difference(lostKeys);
 
     return found;
   }
 
   /// Iterate over the keys fetching the callback from the Expando
+  /// Cleanup dead keys
   void _notifyAllObservers() {
     final Set<Key> lostKeys = {};
     Thunk? observer;
@@ -98,6 +88,6 @@ mixin Updatable {
     }
 
     // remove the lost keys
-    _keys.difference(lostKeys);
+    _keys = _keys.difference(lostKeys);
   }
 }
