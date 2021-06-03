@@ -7,24 +7,23 @@ typedef Thunk = void Function();
 mixin Updatable {
   final Expando<Thunk> _observers = Expando();
   final KeyMaker keys = KeyMaker();
-  final Set<Key> _keys = {};
+  Set<Key> _keys = {};
 
   // make sure re-entrant calls dont send more than 1 notification
   bool _shouldNotify = true;
 
   int _totalCalls = 0;
 
-  int get observerCount => _keys.length;
-
   void addObserver(Thunk notifyMe) {
-    if (!isObserving(notifyMe)) {
+    if (!isBeingObserved(notifyMe)) {
       final key = keys.next;
       _keys.add(key);
       _observers[key] = notifyMe;
+      print('Added $notifyMe');
     }
   }
 
-  bool isObserving(Thunk needle) {
+  bool isBeingObserved(Thunk needle) {
     return _findKey(needle) != null;
   }
 
@@ -59,6 +58,7 @@ mixin Updatable {
   Key? _findKey(Thunk needle) {
     Key? found;
     Thunk? thunk;
+    final Set<Key> lostKeys = {};
 
     for (final Key each in _keys) {
       // Obtain the callback fro the Expando
@@ -68,9 +68,15 @@ mixin Updatable {
         if (thunk! == needle) {
           found = each;
           break;
+        } else {
+          // this key has no value, remove it
+          lostKeys.add(each);
         }
       }
     }
+
+    // cleanup the keys
+    _keys = _keys.difference(lostKeys);
 
     return found;
   }
