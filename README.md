@@ -8,32 +8,14 @@ A simple usage example:
 import 'package:updatable/updatable.dart';
 
 void main() {
-  final joe = SelfAbsorbedPerson('Joe');
-  joe.name = '';
+  final p = Person('Georgina'); // Model
+  final logger = ChangeLogger().observee = p; // Observer
+
+  p.name = 'Jerome'; // Loggers will log
+
+  final me = SelfAbsorbedPerson('Elaine'); // Both
+  me.name = 'Lisa'; 
 }
-
-/// Class that observes its own changes
-class SelfAbsorbedPerson with Updatable {
-  String _name = 'Bob';
-  String get name => _name;
-
-  set name(String newValue) {
-    changeState(() {
-      _name = newValue;
-    });
-  }
-
-  void nameChanged() {
-    // ignore: avoid_print
-    print('My name is now: $name');
-  }
-
-  SelfAbsorbedPerson() {
-    addObserver(nameChanged);
-  }
-}
-
-
 ```
 
 ## Features and bugs
