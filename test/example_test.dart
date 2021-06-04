@@ -1,16 +1,27 @@
-import 'package:updatable/updatable.dart';
+import 'package:updatable/src/updatable_mixin.dart';
+
+import 'package:test/test.dart';
 
 void main() {
-  final p = Person('Georgina'); // Model
-  final logger = ChangeLogger().observee = p; // Observer
+  group("example", () {
+    test('sample usage', () async {
+      final p = Person('Anakin');
+      final logger = ChangeLogger();
 
-  p.name = 'Jerome'; // Loggers will log
+      expect(logger.isObserving, false);
+      logger.observee = p;
+      expect(logger.isObserving, true);
 
-  final me = SelfAbsorbedPerson('Elaine'); // Both
-  me.name = 'Lisa';
+      // cause some changes
+      await () async {
+        p.name = 'Darth Vader';
+        p.name = 'Worst father of the year';
+      }();
+      expect(logger.changes, 2);
+    });
+  });
 }
 
-/// A Model: domain class that include the Updatable mixin
 class Person with Updatable {
   late String _name;
   String get name => _name;
@@ -29,7 +40,6 @@ class Person with Updatable {
   }
 }
 
-/// A generic observer
 class ChangeLogger<Model extends Updatable> {
   Model? _observee;
   Model? get observee => _observee;
@@ -46,21 +56,8 @@ class ChangeLogger<Model extends Updatable> {
   void nameWasChanged() {
     // ignore: avoid_print
     _changes += 1;
-    // ignore: avoid_print
     print('$_observee has changed $_changes times!');
   }
 
   bool get isObserving => _observee != null;
-}
-
-/// Model and Observer at the same type
-class SelfAbsorbedPerson extends Person {
-  SelfAbsorbedPerson(String name) : super(name) {
-    addObserver(navelStaring);
-  }
-
-  void navelStaring() {
-    // ignore: avoid_print
-    print('I just changed!');
-  }
 }
