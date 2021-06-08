@@ -2,7 +2,7 @@ import 'package:updatable/updatable.dart';
 
 void main() {
   final p = Person('Georgina'); // Model
-  final logger = ChangeLogger().observee = p; // Observer
+  final logger = ChangeLogger().observed = p; // Observer
 
   p.name = 'Jerome'; // Loggers will log
 
@@ -31,26 +31,26 @@ class Person with Updatable {
 
 /// A generic observer
 class ChangeLogger<Model extends Updatable> {
-  Model? _observee;
-  Model? get observee => _observee;
-  set observee(Model? other) {
-    if (_observee != other) {
-      _observee = other;
-      _observee?.addObserver(nameWasChanged);
+  Model? _observed;
+  Model? get observed => _observed;
+  set observed(Model? other) {
+    if (_observed != other) {
+      _observed = other;
+      _observed?.addObserver(_observedDidChange);
     }
   }
 
   int _changes = 0;
   int get changes => _changes;
 
-  void nameWasChanged() {
+  void _observedDidChange() {
     // ignore: avoid_print
     _changes += 1;
     // ignore: avoid_print
-    print('$_observee has changed $_changes times!');
+    print('$_observed has changed $_changes times!');
   }
 
-  bool get isObserving => _observee != null;
+  bool get isObserving => _observed != null;
 }
 
 /// Model and Observer at the same type

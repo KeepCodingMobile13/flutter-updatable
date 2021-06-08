@@ -40,6 +40,17 @@ class Person with Updatable {
   }
 }
 
+class SelfAbsorbedPerson extends Person {
+  SelfAbsorbedPerson(String name) : super(name) {
+    addObserver(navelStaring);
+  }
+
+  void navelStaring() {
+    // ignore: avoid_print
+    print('I just changed!');
+  }
+}
+
 class ChangeLogger<Model extends Updatable> {
   Model? _observee;
   Model? get observee => _observee;
@@ -56,6 +67,7 @@ class ChangeLogger<Model extends Updatable> {
   void nameWasChanged() {
     // ignore: avoid_print
     _changes += 1;
+    // ignore: avoid_print
     print('$_observee has changed $_changes times!');
   }
 
