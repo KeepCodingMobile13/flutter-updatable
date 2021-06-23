@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:updatable/src/keys.dart';
 
 typedef Thunk = void Function();
@@ -44,7 +42,7 @@ mixin Updatable {
     callback();
 
     if (_totalCalls == 1) {
-      scheduleMicrotask(() => _notifyAllObservers());
+      _notifyAllObservers();
     }
     _totalCalls -= 1;
   }
@@ -82,7 +80,7 @@ mixin Updatable {
         // this was lost. remvoe the key
         lostKeys.add(each);
       } else {
-        // still, there: notify
+        // still, there: notification
         observer?.call();
       }
     }
