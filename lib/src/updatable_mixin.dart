@@ -8,8 +8,9 @@ mixin Updatable {
   Set<Key> _keys = {};
 
   // make sure re-entrant calls dont send more than 1 notification
-
   int _totalCalls = 0;
+  // avoid callbacks in the middle of a batch modification
+  bool _insideBatchOperation = false;
 
   void addObserver(Thunk notifyMe) {
     if (!isBeingObserved(notifyMe)) {
@@ -36,14 +37,23 @@ mixin Updatable {
   }
 
   /// Change and Notify
-  void changeState(Thunk callback) {
+  void changeState(Thunk singleChange) {
     _totalCalls += 1;
 
-    callback();
+    singleChange();
 
-    if (_totalCalls == 1) {
-      _notifyAllObservers();
-    }
+    _notifyAllObservers();
+
+    _totalCalls -= 1;
+  }
+
+  /// Makes several changes with a single notification at the end
+  void batchChangeState(Thunk batchChanges) {
+    _insideBatchOperation = true;
+    _totalCalls += 1;
+    batchChanges();
+    _insideBatchOperation = false;
+    _notifyAllObservers();
     _totalCalls -= 1;
   }
 
@@ -70,22 +80,26 @@ mixin Updatable {
 
   /// Iterate over the keys fetching the callback from the Expando
   /// Cleanup dead keys
+  /// Call the callback, either sync or async
   void _notifyAllObservers() {
-    final Set<Key> lostKeys = {};
-    Thunk? observer;
+    if (_totalCalls == 1 && _insideBatchOperation == false) {
+      final Set<Key> lostKeys = {};
+      Thunk? observer;
 
-    for (final Key each in _keys) {
-      observer = _observers[each];
-      if (observer == Null) {
-        // this was lost. remvoe the key
-        lostKeys.add(each);
-      } else {
-        // still, there: notification
-        observer?.call();
+      for (final Key each in _keys) {
+        observer = _observers[each];
+        if (observer == Null) {
+          // this was lost. remvoe the key
+          lostKeys.add(each);
+        } else {
+          // still, there: notification
+
+          observer?.call();
+        }
       }
-    }
 
-    // remove the lost keys
-    _keys = _keys.difference(lostKeys);
+      // remove the lost keys
+      _keys = _keys.difference(lostKeys);
+    }
   }
 }

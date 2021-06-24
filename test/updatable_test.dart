@@ -2,11 +2,50 @@ import 'package:updatable/src/updatable_mixin.dart';
 
 import 'package:test/test.dart';
 
+class Person with Updatable {
+  late String _name;
+
+  String get name => _name;
+  set name(String newOne) {
+    changeState(() {
+      _name = name;
+    });
+  }
+
+  late int _age;
+  int get age => _age;
+  void changeAge(int newAge, [int times = 42]) {
+    batchChangeState(() {
+      for (int i = 0; i < times; i++) {
+        _age = newAge;
+      }
+    });
+  }
+
+  void reentrantName(String newOne) {
+    changeState(() {
+      name = newOne;
+      name = newOne;
+    });
+  }
+
+  Person(this._name);
+}
+
+class ChangesCounter {
+  int _totalCalls = 0;
+  int get totalCalls => _totalCalls;
+
+  void inc() {
+    _totalCalls++;
+  }
+}
+
 void main() {
   late ChangesCounter counter;
   late Person paco;
   late List<ChangesCounter> counters;
-  const int size = 1987;
+  const int size = 101;
 
   Future<void> changePerson(Person person, String newName) async {
     person.name = newName;
@@ -16,13 +55,13 @@ void main() {
     person.reentrantName(name);
   }
 
-  group('Updatable', () {
-    setUp(() {
-      counter = ChangesCounter();
-      paco = Person('Paco');
-      counters = [for (int i = 0; i < size; i++) ChangesCounter()];
-    });
+  setUp(() {
+    counter = ChangesCounter();
+    paco = Person('Paco');
+    counters = [for (int i = 0; i < size; i++) ChangesCounter()];
+  });
 
+  group('Single Changes', () {
     test('creation', () {
       expect(() => Person('Luke'), returnsNormally);
       expect(Person('Chewie'), isNotNull);
@@ -189,33 +228,45 @@ void main() {
         expect(each.totalCalls, 1);
       }
     }, skip: false);
+
+    group("batch Changes", () {
+      test(
+          'One batch change with a single notification, causes one  notification',
+          () {
+        paco.addObserver(counter.inc);
+        paco.changeAge(
+            51, 100); // will set the age 100 times, should cause 1 notification
+        expect(counter.totalCalls, 1);
+      });
+
+      test('1 batch change with n observers causes 1 notification per observer',
+          () {
+        for (final ChangesCounter each in counters) {
+          paco.addObserver(each.inc);
+        }
+
+        paco.changeAge(41, 120);
+
+        for (final ChangesCounter each in counters) {
+          expect(each.totalCalls, 1);
+        }
+      }, skip: false);
+
+      test('n batch changes with n observers, causes n notifications', () {
+        const int times = 23;
+
+        for (final ChangesCounter each in counters) {
+          paco.addObserver(each.inc);
+        }
+
+        for (int i = 0; i < times; i++) {
+          paco.changeAge(41, 120);
+        }
+
+        for (final ChangesCounter each in counters) {
+          expect(each.totalCalls, times);
+        }
+      });
+    });
   });
-}
-
-class Person with Updatable {
-  late String _name;
-  String get name => _name;
-  set name(String newOne) {
-    changeState(() {
-      _name = name;
-    });
-  }
-
-  void reentrantName(String newOne) {
-    changeState(() {
-      name = newOne;
-      name = newOne;
-    });
-  }
-
-  Person(this._name);
-}
-
-class ChangesCounter {
-  int _totalCalls = 0;
-  int get totalCalls => _totalCalls;
-
-  void inc() {
-    _totalCalls++;
-  }
 }
