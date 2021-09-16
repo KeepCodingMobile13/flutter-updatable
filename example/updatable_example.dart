@@ -43,7 +43,6 @@ class ChangeLogger<Model extends Updatable> {
   int get changes => _changes;
 
   void _observedDidChange() {
-    // ignore: avoid_print
     _changes += 1;
     // ignore: avoid_print
     print('$_observed has changed $_changes times!');
