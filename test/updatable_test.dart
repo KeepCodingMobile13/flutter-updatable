@@ -1,6 +1,7 @@
-import 'package:updatable/src/updatable_mixin.dart';
+import 'dart:async';
 
 import 'package:test/test.dart';
+import 'package:updatable/src/updatable_mixin.dart';
 
 class Person with Updatable {
   late String _name;
@@ -39,13 +40,19 @@ class ChangesCounter {
   void inc() {
     _totalCalls++;
   }
+
+  @override
+  String toString() {
+    // TODO: implement toString
+    return '<$runtimeType: $totalCalls >';
+  }
 }
 
 void main() {
   late ChangesCounter counter;
   late Person paco;
   late List<ChangesCounter> counters;
-  const int size = 101;
+  const int size = 2;
 
   Future<void> changePerson(Person person, String newName) async {
     person.name = newName;
@@ -59,6 +66,114 @@ void main() {
     counter = ChangesCounter();
     paco = Person('Paco');
     counters = [for (int i = 0; i < size; i++) ChangesCounter()];
+  });
+
+  group('Single Observer', () {
+    test('Before adding, doesn`t receive shit', () async {
+      final c = ChangesCounter();
+      await changePerson(paco, 'newName');
+      expect(c.totalCalls, 0);
+    });
+
+    test('After adding, receives one notification', () async {
+      final c = ChangesCounter();
+      paco.addObserver(c.inc);
+      await changePerson(paco, 'lucas');
+      expect(c.totalCalls, 1);
+    });
+
+    test('After removing, stops receiving', () async {
+      final c = ChangesCounter();
+      paco.addObserver(c.inc);
+      await changePerson(paco, 'lucas');
+      paco.removeObserver(c.inc);
+
+      for (final String name in [
+        'godofredo',
+        'gisberto',
+        'medardo',
+        'fulgencio'
+      ]) {
+        await changePerson(paco, name);
+      }
+
+      expect(c.totalCalls, 1);
+    });
+
+    test('''
+        The mixin is not responsible for determining if a change is spurious 
+        or not, such as setting several times the same value. 
+        The host is reposnible for this.''', () async {
+      final c = ChangesCounter();
+      paco.name = "lucas";
+      paco.addObserver(c.inc);
+      await changePerson(paco, 'lucas');
+      await changePerson(paco, 'lucas');
+      await changePerson(paco, 'lucas');
+      expect(c.totalCalls, 3);
+    });
+  });
+
+  group('Several observers', () {
+    test('n observers added, all are observing', () async {
+      for (final ChangesCounter each in counters) {
+        paco.addObserver(each.inc);
+      }
+
+      for (final ChangesCounter each in counters) {
+        expect(paco.isBeingObserved(each.inc), isTrue);
+      }
+
+      for (final ChangesCounter each in counters) {
+        paco.removeObserver(each.inc);
+      }
+
+      for (final ChangesCounter each in counters) {
+        expect(paco.isBeingObserved(each.inc), isFalse);
+      }
+
+      await changePerson(paco, 'Patricia');
+      for (final ChangesCounter each in counters) {
+        expect(each.totalCalls, 0);
+      }
+    });
+
+    test('n observers, k changes, should have n * k notifications in total',
+        () async {
+      int tally = 0;
+      final n = counters.length;
+      const k = 42;
+
+      for (final ChangesCounter each in counters) {
+        paco.addObserver(each.inc);
+      }
+
+      for (int i = 0; i < k; i++) {
+        await changePerson(paco, 'Spirit');
+      }
+
+      for (final ChangesCounter each in counters) {
+        tally = tally + each.totalCalls;
+      }
+
+      expect(tally, n * k);
+    });
+
+    test('n observers, k changes, should have k notifications each', () async {
+      const k = 1;
+
+      for (final ChangesCounter each in counters) {
+        paco.addObserver(each.inc);
+      }
+
+      for (int i = 0; i < k; i++) {
+        await changePerson(paco, 'Charles Fisher');
+      }
+
+      for (final ChangesCounter each in counters) {
+        expect(each.totalCalls, k);
+      }
+    });
   });
 
   group('Single Changes', () {
@@ -117,6 +232,7 @@ void main() {
     test('1 observer 1 change, 1 notificaton', () async {
       paco.addObserver(counter.inc);
       await changePerson(paco, 'Dart Vader'); // should trigger notification
+
       expect(counter.totalCalls, 1);
     });
 
@@ -161,7 +277,7 @@ void main() {
       for (final ChangesCounter each in counters) {
         expect(each.totalCalls, 1);
       }
-    });
+    }, skip: false);
 
     test('n observers, 1 recursive change, each gets 1 notification', () async {
       // add n observers
@@ -175,7 +291,7 @@ void main() {
       for (final ChangesCounter each in counters) {
         expect(each.totalCalls, 1);
       }
-    });
+    }, skip: false);
 
     test('n observers, n recursive change, each gets n notifications',
         () async {
@@ -191,7 +307,7 @@ void main() {
       for (final ChangesCounter each in counters) {
         expect(each.totalCalls, size);
       }
-    });
+    }, skip: false);
 
     test(
         'Add n different observers, and n different notifications will be sent',
@@ -212,10 +328,11 @@ void main() {
       for (final ChangesCounter each in counters) {
         expect(each.totalCalls, 1);
       }
-    });
+    }, skip: false);
 
-    test('Add n observers, make 1 change, get n notifications', () async {
-      const int size = 845;
+    test('Add n observers, make 1 change, each gets 1 notification, n in total',
+        () async {
+      const int size = 2;
       final obs = [for (int i = 0; i < size; i++) ChangesCounter()];
 
       for (final ChangesCounter each in obs) {
@@ -223,6 +340,8 @@ void main() {
       }
 
       await changePerson(paco, 'Minch Yoda');
+
+      await pumpEventQueue();
 
       for (final ChangesCounter each in obs) {
         expect(each.totalCalls, 1);

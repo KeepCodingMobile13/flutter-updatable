@@ -5,8 +5,24 @@ import 'package:updatable/src/keys.dart';
 typedef Thunk = void Function();
 
 mixin Updatable {
+  ///
+  /// Uses an `Expando` to keep a weak reference to all the observers (`Thunk`)
+  /// An `Expando` is a `Map<Key, Observer>` only has the `[]` and `[]==`
+  /// defined. Therefore, you may add and remove `Observers,
+  ///  but you can't inspect how many are there
+  /// or iterate over them.
+  ///
   final Expando<Thunk> _observers = Expando();
+
+  /// `KeyMaker` creates enumerable `Keys` for the `Expando`. A `Key` is simply
+  /// a box over an `int`.
   final KeyMaker keys = KeyMaker();
+
+  /// Whenever a new observer is added to the `Expando`, a new `Key` is
+  /// created and added to this `Set`.
+  /// This allows to iterate over the `Expando`.
+  /// This `Set` must be garbage collected from time to time, as when an
+  /// observer disappears , the key will be orphaned.
   Set<Key> _keys = {};
 
   // make sure re-entrant calls dont send more than 1 notification
@@ -82,25 +98,26 @@ mixin Updatable {
 
   /// Iterate over the keys fetching the callback from the Expando
   /// Cleanup dead keys
-  /// Call the callback, either sync or async
+  /// Call the callback
   void _notifyAllObservers() {
     if (_totalCalls == 1 && _insideBatchOperation == false) {
       final Set<Key> lostKeys = {};
-      Thunk? observer;
-
       for (final Key each in _keys) {
-        observer = _observers[each];
-        if (observer == Null) {
+        final obs = _observers[each];
+
+        if (obs == null) {
           // this was lost. remvoe the key
           lostKeys.add(each);
         } else {
           // still there: notification
-          scheduleMicrotask(() => observer?.call());
+          scheduleMicrotask(() => obs.call());
         }
       }
 
       // remove the lost keys
-      _keys = _keys.difference(lostKeys);
+      if (lostKeys.isNotEmpty) {
+        _keys = _keys.difference(lostKeys);
+      }
     }
   }
 }

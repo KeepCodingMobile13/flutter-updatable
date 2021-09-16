@@ -1,6 +1,5 @@
-import 'package:updatable/src/keys.dart';
-
 import 'package:test/test.dart';
+import 'package:updatable/src/keys.dart';
 
 void main() {
   late KeyMaker keys;

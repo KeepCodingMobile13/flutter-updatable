@@ -1,6 +1,5 @@
-import 'package:updatable/src/updatable_mixin.dart';
-
 import 'package:test/test.dart';
+import 'package:updatable/src/updatable_mixin.dart';
 
 void main() {
   group("example", () {

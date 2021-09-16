@@ -2,7 +2,6 @@ import 'package:updatable/updatable.dart';
 
 void main() {
   final p = Person('Georgina'); // Model
-  final logger = ChangeLogger().observed = p; // Observer
 
   p.name = 'Jerome'; // Loggers will log
 
