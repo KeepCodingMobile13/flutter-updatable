@@ -16,11 +16,25 @@ class Person with Updatable {
   }
 
   late int _age;
+  set age(int newValue) {
+    changeState(() {
+      _age = newValue;
+    });
+  }
+
   int get age => _age;
   void changeAge(int newAge, [int times = 42]) {
     batchChangeState(() {
       for (int i = 0; i < times; i++) {
-        _age = newAge;
+        age = newAge;
+      }
+    });
+  }
+
+  void changeAgeWithoutNotification(int newAge, [int times = 42]) {
+    changeStateWithoutNotification(() {
+      for (int i = 0; i < times; i++) {
+        age = newAge;
       }
     });
   }
@@ -29,6 +43,13 @@ class Person with Updatable {
     changeState(() {
       name = newOne;
       name = newOne;
+    });
+  }
+
+  void reentrantAge(int newAge) {
+    changeState(() {
+      age = newAge;
+      age = newAge + 42;
     });
   }
 
@@ -398,5 +419,38 @@ void main() {
         expect(each.totalCalls, times);
       }
     });
+  });
+
+  group('Changes without notification', () {
+    test('n changes, m observers and 0 notifications', () async {
+      for (final ChangesCounter each in counters) {
+        paco.addObserver(each.inc);
+      }
+
+      await waitForIt(() {
+        paco.changeAgeWithoutNotification(41, 120);
+      });
+
+      for (final ChangesCounter each in counters) {
+        expect(each.totalCalls, 0);
+      }
+    });
+
+    test('n recursive notification, m observers, 0 notifications', () async {
+      for (final ChangesCounter each in counters) {
+        paco.addObserver(each.inc);
+      }
+
+      // recursive change
+      await waitForIt(() {
+        paco.changeStateWithoutNotification(() {
+          paco.reentrantAge(32);
+        });
+      });
+
+      for (final ChangesCounter each in counters) {
+        expect(each.totalCalls, 0);
+      }
+    }, skip: true);
   });
 }

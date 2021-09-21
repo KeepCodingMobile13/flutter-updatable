@@ -30,6 +30,9 @@ mixin Updatable {
   // avoid callbacks in the middle of a batch modification
   bool _insideBatchOperation = false;
 
+  // temporarely suspended chnages
+  bool _notificationsOnHold = false;
+
   void addObserver(Thunk notifyMe) {
     if (!isBeingObserved(notifyMe)) {
       final key = keys.next;
@@ -63,6 +66,13 @@ mixin Updatable {
     _notifyAllObservers();
 
     _totalCalls -= 1;
+  }
+
+// Make a chnage without sending a notification
+  void changeStateWithoutNotification(Thunk stealthChange) {
+    _notificationsOnHold = true;
+    stealthChange();
+    _notificationsOnHold = false;
   }
 
   /// Makes several changes with a single notification at the end
@@ -100,7 +110,9 @@ mixin Updatable {
   /// Cleanup dead keys
   /// Call the callback
   void _notifyAllObservers() {
-    if (_totalCalls == 1 && _insideBatchOperation == false) {
+    if (_totalCalls == 1 &&
+        _insideBatchOperation == false &&
+        _notificationsOnHold == false) {
       final Set<Key> lostKeys = {};
       for (final Key each in _keys) {
         final obs = _observers[each];
