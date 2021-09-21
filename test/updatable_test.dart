@@ -451,6 +451,6 @@ void main() {
       for (final ChangesCounter each in counters) {
         expect(each.totalCalls, 0);
       }
-    }, skip: true);
+    }, skip: false);
   });
 }
